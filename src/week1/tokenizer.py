@@ -27,28 +27,38 @@ def build_vocab(dataSet, tokenizer):
     counter.update(tokenizer(data['document_plaintext']))
   return Vocab(counter)
 
-def data_process(dataSet, vocab, tokenizer):
+def data_process(dataSet, vocab, tokenizer, tokenPart = "document"):
   data = []
   for element in dataSet:
-    en_tensor_ = torch.tensor([vocab[token] for token in tokenizer(element["document_plaintext"])], dtype=torch.long)
-    data.append(en_tensor_)
+    if tokenPart == "document":
+        en_tensor_ = torch.tensor([vocab[token] for token in tokenizer(element["document_plaintext"])], dtype=torch.long)
+        data.append(en_tensor_)
+    elif tokenPart == "question":
+        en_tensor_ = torch.tensor([vocab[token] for token in tokenizer(element["question_text"])],dtype=torch.long)
+        data.append(en_tensor_)
+    elif tokenPart == "answer":
+        if len(element["annotations"]["answer_text"]) != 0:
+            en_tensor_ = torch.tensor([vocab[token] for token in tokenizer(element["annotations"]["answer_text"])], dtype=torch.long)
+            data.append(en_tensor_)
+        else:
+            data.append(torch.tensor([0], dtype=torch.long))
   return data
 
-def getEnglishVocab(data):
+def getEnglishData(data, tokenPart = "document"):
     tokenizer = get_tokenizer('basic_english', language="en")
     englishDataSet = getEnglishDataSet(data)
     englishVocab = build_vocab(englishDataSet, tokenizer)
-    return data_process(englishDataSet, englishVocab, tokenizer)
+    return data_process(englishDataSet, englishVocab, tokenizer, tokenPart)
 
 # todo Japanese的tokenizer
-def getJapaneseVocab(data):
+def getJapaneseData(data):
     tokenizer = get_tokenizer('basic_english', language="en")
     dataset = getJapaneseDataSet(data)
     vocab = build_vocab(dataset, tokenizer)
     return data_process(dataset, vocab, tokenizer)
 
 # todo Finnish的tokenizer
-def getFinnishVocab(data):
+def getFinnishData(data):
     tokenizer = get_tokenizer('basic_english', language="en")
     dataset = getFinnishDataSet(data)
     vocab = build_vocab(dataset, tokenizer)
