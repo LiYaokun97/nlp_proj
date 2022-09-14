@@ -56,7 +56,7 @@ for epoch in range(args.epochs):
         batch_num += 1
         print("epoch:", epoch + 1, "batch_num:", batch_num, "loss:", round(loss.item(), 4), "acc:", acc)
 print("max_acc:", max_acc)
-model = torch.load("model.pth")
+model.load_state_dict(torch.load("model.pth"))
 
 predict_label = model(english_question_validation_set, english_document_validation_set)
 pred = predict_label.max(-1, keepdim=True)[1]
