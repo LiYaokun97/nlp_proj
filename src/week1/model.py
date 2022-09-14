@@ -32,6 +32,7 @@ class attention(nn.Module):
             z_mp = z_mp+ embeds[i]*beta[i]
         return z_mp
 
+
 class QA_model(nn.Module):
     def __init__(self,input_dim,hidden_dim,output_dim):
         super(QA_model, self).__init__()
