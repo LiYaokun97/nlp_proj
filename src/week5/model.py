@@ -84,3 +84,4 @@ class QA_model(nn.Module):
         predict_label = predict_label.reshape(-1, self.num_labels)
 
         return predict_label
+

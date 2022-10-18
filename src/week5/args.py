@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 def get_args():
     parser =ArgumentParser()
 
-    parser.add_argument("-epochs", type=int, default=0, dest = "epochs", help="number of epochs")
+    parser.add_argument("-epochs", type=int, default=50, dest = "epochs", help="number of epochs")
     parser.add_argument("-batch_size", type=int, default=64,dest="batch_size")
     parser.add_argument("-lr",type=float,default=0.001,help="learning rate")
 
