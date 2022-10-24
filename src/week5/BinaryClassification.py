@@ -4,11 +4,13 @@ import numpy as np
 from torch.utils.data import Dataset
 from bpemb import BPEmb
 # import nni
+import tqdm
 import torch.utils.data as Data
 from datasets import load_dataset
 import transformers
 from transformers import AutoTokenizer
 from model import *
+from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
 
 device = torch.device("cpu")
 if torch.cuda.is_available():
@@ -206,19 +208,39 @@ print("train_max_acc:", max_acc)
 model = QA_model(args.input_dim, args.hidden_dim, args.output_dim).to('cuda')
 model.load_state_dict(torch.load("model.pth"))
 
-count_acc = 0
-max_test_acc = 0
-count = 0
-count_all_the_same = 0
-for batch in test_loader:
-    label = torch.stack(batch['label'], dim=0).cuda().squeeze(0)
-    predict_label = model(batch)
-    pred = predict_label.max(-1, keepdim=True)[1]
-    test_acc = pred.eq(label.view_as(pred)).sum().item() / predict_label.shape[0]
-    count += 1
-    max_test_acc = max(test_acc, max_test_acc)
-    count_acc += test_acc
-    count_all_the_same += predict_same_with_label(pred, label)
+
+def evaluate(model: nn.Module, valid_dl):
+    """
+    Evaluates the model on the given dataset
+    :param model: The model under evaluation
+    :param valid_dl: A `DataLoader` reading validation data
+    :return: The accuracy of the model on the dataset
+    """
+    # VERY IMPORTANT: Put your model in "eval" mode -- this disables things like
+    # layer normalization and dropout
+    model.eval()
+    labels_all = []
+    preds_all = []
+
+    # ALSO IMPORTANT: Don't accumulate gradients during this process
+    with torch.no_grad():
+        for batch in valid_dl:
+            # batch = tuple(t.to(device) for t in batch)
+            labels = torch.stack(batch['label'], dim=1).cuda()
+            hidden_states = None
+
+            logits = model(batch)
+            preds_all.extend(torch.argmax(logits, dim=-1).reshape(-1).detach().cpu().numpy())
+            labels_all.extend(labels.reshape(-1).detach().cpu().numpy())
+
+    P, R, F1, _ = precision_recall_fscore_support(labels_all, preds_all, average='macro')
+    print(confusion_matrix(labels_all, preds_all))
+    return F1
+
+
+F1 = evaluate(model, test_loader)
+print("F1:", F1)
+
 
 # input_ids= [torch.tensor(ids).cuda() for ids in test_data['input_ids']]
 # attenion_mask= [torch.tensor(mask).cuda() for mask in test_data['attention_mask']]
@@ -231,25 +253,6 @@ for batch in test_loader:
 # max_acc = 0
 # count=0
 # count_acc=0
-
-print("test max acc:", max_test_acc)
-print("test avrage acc:", count_acc / count)
-print("test all the same value:", count_all_the_same / count)
-
-# input_ids= [torch.tensor(ids).cuda() for ids in test_data['input_ids']]
-# attenion_mask= [torch.tensor(mask).cuda() for mask in test_data['attention_mask']]
-# test_data ={"input_ids":input_ids,"attention_mask":attenion_mask}
-# predict_label = model(test_data)
-# pred = predict_label.max(-1,keepdim=True)[1]
-# label = torch.squeeze(test_data['label'],dim=-1).cuda()
-# test_acc = pred.eq(label.view_as(pred)).sum().item()/predict_label.shape[0]
-# print("test acc:",test_acc)
-# max_acc = 0
-# count=0
-# count_acc=0
-
-print("test max acc:", max_test_acc)
-print("test avrage acc:", count_acc / count)
 
 
 # params = vars(get_args)
