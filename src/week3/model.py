@@ -1,7 +1,11 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from transformers import GPT2Tokenizer, GPT2Model
 from transformers import AutoModelForCausalLM, AutoModelForSequenceClassification
+from transformers import ReformerTokenizer, GPT2Model, TFGPT2Model
+from transformers import AutoConfig, AutoModel
+from transformers import DistilBertTokenizer, DistilBertModel
 
 
 class attention(nn.Module):
@@ -64,8 +68,12 @@ class QA_model(nn.Module):
         self.context_in_mlp = nn.Linear(input_dim, hidden_dim)
         self.output_layer = MLP(input_dim, hidden_dim, output_dim)
         self.attention_layer = attention(hidden_dim, 0.5)
-        model_checkpoint = "bert-base-multilingual-uncased"
-        self.transformer_layer = AutoModelForCausalLM.from_pretrained(model_checkpoint)
+        ## english
+        # self.transformer_layer = DistilBertModel.from_pretrained("distilbert-base-uncased")
+        ## finnish
+        # self.transformer_layer = GPT2Model.from_pretrained('Finnish-NLP/gpt2-finnish')
+        ## japanses
+        self.transformer_layer = AutoModelForCausalLM.from_pretrained("rinna/japanese-gpt2-medium")
 
     def forward(self, input):
         input_ids = torch.stack(input["input_ids"], dim=1).cuda()
@@ -74,10 +82,11 @@ class QA_model(nn.Module):
         # question_attention_mask=torch.stack(input['question_attention_mask'],dim=0).cuda()
         # document_input_ids = torch.stack(input['document_input_ids'],dim=0).cuda()
         # document_attention_mask = torch.stack(input['document_attention_mask'],dim=0).cuda()
+
         hidden_states = \
         self.transformer_layer(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True,
                                return_dict=True)['hidden_states']
         hidden_out = mean_pooling(hidden_states[-1], attention_mask)
-        predict_label = F.sigmoid(self.output_layer(hidden_out))
+        predict_label = self.output_layer(hidden_out)
 
         return predict_label
